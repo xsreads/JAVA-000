@@ -24,13 +24,17 @@ Major GC（大型 GC）Old 区的 GC
     
     Minor GC：Eden 区和S0 区中的对象复制到 S1 区，同时有部分对象可能会晋升到老年代。
     
-    Full GC：
+    Full GC：只有老年代在处理。
 
 2. 并行 GC（ParallelGC）
 
     -XX: +UserParallelGC
     
     -XX: +UserParallelOldGC
+    
+    年轻代 GC：Eden 区和存活区 S0 负责到存活区 S1，并清空，部分对象晋升到老年代，老年代数据量慢慢增加。
+    
+    Full GC：老年代数据量越来越大，空间占比越来越少，会触发，直接把年轻代清空，老年代不活跃时间清除掉。
     
     年轻代和老年代的垃圾回收都会触发 STW 事件。
     
@@ -44,8 +48,6 @@ Major GC（大型 GC）Old 区的 GC
     
     Java 8 默认的垃圾收集器。
 
-    FullGC 时 young 区减少很多，old 区减少比较少
-
 3. CMS GC（ConcMarkSweepGC）
 
     -XX: +UseConcMarkSweepGC
@@ -53,6 +55,18 @@ Major GC（大型 GC）Old 区的 GC
     其对年轻代采用并行 STW 方式的 mark-copy（标记-复制）算法，对老年代主要使用并发 mark-sweep（标记-清除）算法。
     
     如果服务器是多核 CPU，并且主要调优目标是降低 GC 停顿导致的系统延迟，那么使用 CMS 是个很明智的选择。进行老年代的并发回收时，可能会伴随着多次年轻代的 minor GC。
+    
+    阶段 1：Initial Mark（初识标记）
+    
+    阶段 2：Concurrent Mark（并发标记）
+    
+    阶段 3：Concurrent Preclean（并发预清理）
+    
+    阶段 4：Final Remark（最终标记）
+    
+    阶段 5：Concurrent Sweep（并发清除）
+    
+    阶段 6：Concurrent Rest（并发重置）
 
 4. G1 GC
 
@@ -63,3 +77,23 @@ Major GC（大型 GC）Old 区的 GC
     G1 GC 是一款软实时垃圾收集器，可以为其设置某项特定的性能指标。为了达成可预期停顿时间的指标，G1 GC 有一些独特的实现。
     
     首先，堆不再分成年轻代和老年代，而是划分为多个可以存放对象的小块堆区域。每个小块，可能一会被定义成 Eden 区，一会被指定为 Survivor 区或者 Old 区。
+    
+    Evacuation Pause: young（纯年轻代模式转移暂停）
+    
+    Concurrent Marking（并发标记）
+    
+    阶段 1：Initial Mark（初识标记）
+    
+    阶段 2：Root Region Scan（Root区扫描）
+    
+    阶段 3：Concurrent Mark（并发标记）
+    
+    阶段 4：Remark（再次标记）
+    
+    阶段 5：Cleanup（清理）
+    Evacuation Pause（mixed）（转移暂停：混合模式）
+    
+    Full GC（Allocation Failure）
+    
+    
+如果不配置 Xms，会导致第一次 GC 提前。
